@@ -122,13 +122,13 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className="relative w-full bg-void text-ink-100 font-sans select-none min-h-[550vh]">
-      
+
       {/* Fixed R3F background canvas driven by scroll progress */}
       <ScrollDescentScene scrollProgress={scrollProgress} />
 
       {/* FIXED TELEMETRY INSTRUMENT PANEL HUD (Sits on top, static) */}
       <div className="fixed inset-x-0 top-0 z-40 pointer-events-none p-4 flex flex-col gap-3 font-mono text-xs">
-        
+
         {/* Navbar-style header HUD */}
         <header className="w-full flex items-center justify-between border-b border-hud-line/25 pb-2 pointer-events-auto bg-void/45 backdrop-blur-sm px-4 py-2 rounded">
           <div className="flex items-center gap-4 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
@@ -148,7 +148,7 @@ export const LandingPage: React.FC = () => {
         </header>
 
         {/* Telemetry metadata bars */}
-        <div className="w-full flex justify-between gap-4 mt-2">
+        <div className="w-full hidden xl:flex justify-between gap-4 mt-2">
           {/* Left instruments stack */}
           <div className="flex flex-col gap-1.5 bg-void/70 border border-hud-line/20 p-2.5 rounded backdrop-blur">
             <div className="flex justify-between w-64 border-b border-line pb-1">
@@ -184,6 +184,36 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Slim single-line HUD for smaller screens */}
+        <div className="w-full flex xl:hidden flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-void/80 border border-hud-line/20 p-2.5 rounded backdrop-blur text-[10px] font-mono pointer-events-auto shadow-md">
+          <div className="flex items-center gap-1">
+            <span className="text-text-muted">ALT:</span>
+            <span className="text-scan-hot font-bold">{altitude} M</span>
+          </div>
+          <span className="text-hud-line/20">|</span>
+          <div className="flex items-center gap-1">
+            <span className="text-text-muted">GPS:</span>
+            <span className="text-ink-100 font-bold">{latitude}° N, {longitude}° E</span>
+          </div>
+          <span className="text-hud-line/20">|</span>
+          <div className="flex items-center gap-1">
+            <span className="text-text-muted">CLOCK:</span>
+            <span className="text-scan-cold font-bold">{timestamp}</span>
+          </div>
+          <span className="text-hud-line/20">|</span>
+          <div className="flex items-center gap-1">
+            <span className="text-text-muted">COMPASS:</span>
+            <span className="text-ink-100 font-bold">{compassHeading}° S</span>
+          </div>
+          <span className="text-hud-line/20">|</span>
+          <div className="flex items-center gap-1 min-w-0">
+            <span className="text-text-muted">STAGE:</span>
+            <span className="text-scan-mid font-extrabold uppercase truncate max-w-[120px]" title={currentStageName()}>
+              {currentStageName()}
+            </span>
+          </div>
+        </div>
+
         {/* Dynamic scroll warning instructions (fades out as descent progresses) */}
         {scrollProgress < 0.08 && (
           <div className="absolute left-1/2 bottom-[-450px] -translate-x-1/2 flex flex-col items-center gap-1.5 text-text-muted select-none">
@@ -195,11 +225,11 @@ export const LandingPage: React.FC = () => {
 
       {/* SCROLL CONTENT OVERLAY PANELS LAYER */}
       <div className="relative z-20 w-full pointer-events-none">
-        
+
         {/* PANEL 1: HERO TITLE (Trigger: 0.01..0.15) */}
-        <div 
+        <div
           style={getPanelStyle(0.01, 0.14)}
-          className="fixed top-1/2 left-4 md:left-12 -translate-y-1/2 max-w-xl flex flex-col gap-4 p-5 rounded border border-line bg-void/85 backdrop-blur-sm"
+          className="fixed top-1/2 left-4 md:left-12 xl:left-[360px] -translate-y-1/2 xl:-translate-y-1/2 mt-16 max-w-xl xl:max-w-[580px] flex flex-col gap-4 p-5 rounded border border-line bg-void/85 backdrop-blur-sm"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-scan-hot font-mono text-xs font-bold uppercase tracking-wider">
@@ -215,7 +245,7 @@ export const LandingPage: React.FC = () => {
             SINGLE-PASS DRONE VIDEO TO ACCURATE 3D MODEL.<br />
             <span className="text-scan-mid">SCROLLING IS DESCENDING.</span>
           </h2>
-          
+
           <p className="text-xs md:text-sm text-text-muted leading-relaxed font-sans">
             AI-Powered Single-Pass 3D Drone Reconstruction platform (God's Eye). Fusing classical camera pose tracking with zero-shot monocular depth estimation to build metrically accurate 3D digital twins without LiDAR hardware.
           </p>
@@ -231,9 +261,9 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* PANEL 2: THE PROBLEM (Trigger: 0.17..0.35) */}
-        <div 
+        <div
           style={getPanelStyle(0.16, 0.34)}
-          className="fixed top-1/2 right-4 md:right-12 -translate-y-1/2 max-w-lg flex flex-col gap-4 p-5 rounded border border-line bg-void/85 backdrop-blur-sm"
+          className="fixed top-1/2 right-4 md:right-12 xl:right-[360px] -translate-y-1/2 xl:-translate-y-1/2 mt-16 max-w-lg xl:max-w-[540px] flex flex-col gap-4 p-5 rounded border border-line bg-void/85 backdrop-blur-sm"
         >
           <span className="font-mono text-xs text-danger uppercase tracking-widest font-bold">01 / TRAJECTORY GEOMETRY GAP</span>
           <h3 className="text-2xl font-display font-bold text-ink-100 uppercase">THE CRITICAL BOTTLENECK</h3>
@@ -247,9 +277,9 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* PANEL 3: THE FLOW APPROACH (Trigger: 0.37..0.57) */}
-        <div 
+        <div
           style={getPanelStyle(0.36, 0.56)}
-          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-3xl flex flex-col gap-5 p-5 rounded border border-line bg-void/90 backdrop-blur-sm"
+          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-16 w-[90%] max-w-3xl xl:max-w-[560px] flex flex-col gap-5 p-5 rounded border border-line bg-void/90 backdrop-blur-sm"
         >
           <div className="flex flex-col gap-1 font-mono text-center">
             <span className="text-xs text-scan-mid uppercase font-bold tracking-widest">02 / PIPELINE SOLVER FLOW</span>
@@ -277,9 +307,9 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* PANEL 4: ACCURACY & IMPACT COMPARISON (Trigger: 0.59..0.75) */}
-        <div 
+        <div
           style={getPanelStyle(0.58, 0.74)}
-          className="fixed top-1/2 left-4 md:left-12 -translate-y-1/2 max-w-xl flex flex-col gap-4 p-5 rounded border border-line bg-void/90 backdrop-blur-sm"
+          className="fixed top-1/2 left-4 md:left-12 xl:left-[360px] -translate-y-1/2 xl:-translate-y-1/2 mt-16 max-w-xl xl:max-w-[580px] flex flex-col gap-4 p-5 rounded border border-line bg-void/90 backdrop-blur-sm"
         >
           <div className="flex flex-col gap-1 font-mono">
             <span className="text-xs text-scan-cold uppercase font-bold tracking-widest">03 / ACCURACY SYNCHRONIZATION</span>
@@ -322,9 +352,9 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* PANEL 5: RISKS & MITIGATIONS (Trigger: 0.77..0.89) */}
-        <div 
+        <div
           style={getPanelStyle(0.76, 0.88)}
-          className="fixed top-1/2 right-4 md:right-12 -translate-y-1/2 max-w-xl flex flex-col gap-3 p-5 rounded border border-line bg-void/90 backdrop-blur-sm"
+          className="fixed top-1/2 right-4 md:right-12 xl:right-[360px] -translate-y-1/2 xl:-translate-y-1/2 mt-16 max-w-xl xl:max-w-[540px] flex flex-col gap-3 p-5 rounded border border-line bg-void/90 backdrop-blur-sm"
         >
           <div className="flex items-center justify-between font-mono">
             <span className="text-xs text-scan-hot uppercase tracking-widest font-bold">04 / RISKS & PRE-MITIGATIONS</span>
@@ -348,9 +378,9 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* PANEL 6: RESEARCH & TEAM (Trigger: 0.90..0.95) */}
-        <div 
+        <div
           style={getPanelStyle(0.89, 0.95)}
-          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-2xl flex flex-col gap-4 p-5 rounded border border-line bg-void/90 backdrop-blur-sm"
+          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-16 w-[90%] max-w-2xl xl:max-w-[560px] flex flex-col gap-4 p-5 rounded border border-line bg-void/90 backdrop-blur-sm"
         >
           <div className="flex justify-between items-center font-mono">
             <span className="text-xs text-scan-cold uppercase font-bold tracking-widest">05 / RESEARCH & STACK</span>
@@ -386,7 +416,7 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* PANEL 7: CTA TOUCHDOWN (Trigger: 0.96..1.0) */}
-        <div 
+        <div
           style={getPanelStyle(0.96, 1.0)}
           className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-sm w-[90%] flex flex-col items-center text-center gap-5 p-6 rounded border border-scan-hot/40 bg-void/90 backdrop-blur shadow-2xl"
         >
