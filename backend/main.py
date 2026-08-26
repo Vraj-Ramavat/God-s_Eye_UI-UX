@@ -38,6 +38,14 @@ os.makedirs(STORAGE_ROOT, exist_ok=True)
 MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024 
 ALLOWED_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
 
+@app.on_event("startup")
+async def startup_event():
+    enabled = MOCK_MODE
+    status_msg = "[WARNING] Running in MOCK MODE - no real reconstruction will occur" if enabled else "[OK] Real reconstruction pipeline active"
+    border = "=" * 64
+    mode_str = "enabled" if enabled else "disabled"
+    print(f"\n{border}\n  GOD'S EYE BACKEND -- MOCK_MODE: {mode_str}\n  {status_msg}\n{border}\n", flush=True)
+
 @app.get("/api/health")
 def health_check():
     """Service health check endpoint"""
@@ -117,7 +125,7 @@ async def create_reconstruction_job(
 def get_job_status(job_id: str):
     """
     3. Status endpoint: Returns current processing stage,
-       progress percentage, and result metadata once completed.
+       progress percentage, fallback details, and result metadata once completed.
     """
     job = get_job(job_id)
     if not job:
@@ -132,6 +140,8 @@ def get_job_status(job_id: str):
         "stage": job.stage,
         "progress": job.progress,
         "processing_time_seconds": job.processing_time_seconds,
+        "fallback_stages": job.fallback_stages,
+        "used_fallback": job.used_fallback,
         "error": job.error
     }
     
@@ -173,7 +183,10 @@ def get_job_metadata(job_id: str):
     """
     job = get_job(job_id)
     if job and job.metadata:
-        return job.metadata
+        res_meta = dict(job.metadata)
+        res_meta["fallback_stages"] = job.fallback_stages
+        res_meta["used_fallback"] = job.used_fallback
+        return res_meta
 
     # Default fallback schema
     return {
@@ -186,6 +199,8 @@ def get_job_metadata(job_id: str):
         "processing_time_seconds": job.processing_time_seconds if job else 12.4,
         "coverage_percent": 98.6,
         "reconstruction_method": "COLMAP SfM + YOLO Masking + Depth Anything V2 Fusion",
+        "fallback_stages": job.fallback_stages if job else [],
+        "used_fallback": job.used_fallback if job else False,
         "capture_metadata": {
             "location": "Quarry Recon Site Alpha",
             "capture_date": "2026-08-26T10:00:00Z",
@@ -196,6 +211,7 @@ def get_job_metadata(job_id: str):
             }
         }
     }
+
 
 @app.get("/api/jobs/{job_id}/flightpath")
 def get_job_flightpath(job_id: str):

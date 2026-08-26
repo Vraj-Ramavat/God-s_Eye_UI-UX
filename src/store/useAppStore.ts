@@ -78,6 +78,8 @@ interface AppState {
   viewMode: ViewMode;
   sidebarOpen: boolean;
   modelMetadata: ModelMetadata;
+  fallbackStages: string[];
+
   
   // Spline Flythrough mode
   waypoints: Waypoint[];
@@ -148,6 +150,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   modelSource: 'DEMO DATA',
   viewMode: 'textured',
   sidebarOpen: true,
+  fallbackStages: [],
+
 
   waypoints: RECON_WAYPOINTS,
 
@@ -232,6 +236,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadDemoModel: () => set({
     activeModelPath: '/models/12306918_recon_model.glb',
     modelSource: 'DEMO DATA',
+    fallbackStages: [],
     isUploadModalOpen: false,
     uploadState: 'idle',
     uploadError: null,
@@ -434,11 +439,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
             // 3. Set active model GLB URL to real backend GLB endpoint
             const modelGlbUrl = `${BACKEND_URL}/api/jobs/${jobId}/model.glb?t=${Date.now()}`;
+            const fallbacks = statusData.fallback_stages || meta?.fallback_stages || [];
 
             set({
               uploadState: 'complete',
               modelSource: 'LIVE RECONSTRUCTION',
               activeModelPath: modelGlbUrl,
+              fallbackStages: fallbacks,
               modelMetadata: {
                 vertexCount: `${meta?.vertex_count?.toLocaleString() || '38,400'} Vertices`,
                 faceCount: `${meta?.face_count?.toLocaleString() || '76,000'} Triangles`,

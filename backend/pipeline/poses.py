@@ -6,13 +6,13 @@ from typing import Dict, Any, List, Tuple
 
 logger = logging.getLogger(__name__)
 
-def estimate_camera_poses(frames_dir: str, masks_dir: str, storage_dir: str) -> Tuple[Dict[str, Any], List[Dict[str, Any]], np.ndarray]:
+def estimate_camera_poses(frames_dir: str, masks_dir: str, storage_dir: str) -> Tuple[Dict[str, Any], List[Dict[str, Any]], np.ndarray, bool]:
     """
     Runs COLMAP camera pose estimation (via pycolmap or fallback simulation)
     respecting dynamic object masks so moving objects aren't used as tracking features.
     
     Returns:
-      (camera_poses_dict, flightpath_waypoints, sparse_points)
+      (camera_poses_dict, flightpath_waypoints, sparse_points, used_fallback)
     """
     colmap_dir = os.path.join(storage_dir, "colmap")
     os.makedirs(colmap_dir, exist_ok=True)
@@ -45,7 +45,16 @@ def estimate_camera_poses(frames_dir: str, masks_dir: str, storage_dir: str) -> 
                 
             for img_id, img in reconstruction.images.items():
                 pos = img.projection_center()
-                rot = img.rotmat()
+                if hasattr(img, "rotmat"):
+                    rot = img.rotmat()
+                elif hasattr(img, "cam_from_world"):
+                    cam_fw = img.cam_from_world() if callable(img.cam_from_world) else img.cam_from_world
+                    rot = cam_fw.rotation.matrix()
+                elif hasattr(img, "rotation_matrix"):
+                    rot = img.rotation_matrix()
+                else:
+                    rot = np.eye(3)
+
                 look_at = pos + rot[2] * 2.0
                 
                 wp = {
@@ -62,7 +71,7 @@ def estimate_camera_poses(frames_dir: str, masks_dir: str, storage_dir: str) -> 
                 poses[img.name] = {"position": pos.tolist(), "rotation": rot.tolist()}
 
             sparse_pts_arr = np.array(pts, dtype=np.float32) if pts else _generate_synthetic_points()
-            return poses, waypoints, sparse_pts_arr
+            return poses, waypoints, sparse_pts_arr, False
             
     except Exception as e:
         logger.warning(f"pycolmap/COLMAP execution unavailable ({e}), using analytical drone flight path generator.")
@@ -101,7 +110,8 @@ def estimate_camera_poses(frames_dir: str, masks_dir: str, storage_dir: str) -> 
         }
 
     sparse_points = _generate_synthetic_points()
-    return poses, waypoints, sparse_points
+    return poses, waypoints, sparse_points, True
+
 
 def _generate_synthetic_points(num_points: int = 500) -> np.ndarray:
     """Generate analytical terrain landmark point cloud"""

@@ -12,7 +12,8 @@ import {
   Info,
   ArrowUp,
   Square,
-  Activity
+  Activity,
+  AlertTriangle
 } from 'lucide-react';
 
 type SidebarTab = 'tools' | 'waypoints' | 'metadata';
@@ -22,6 +23,7 @@ export const TelemetrySidebar: React.FC = () => {
     reconstructionStats,
     modelMetadata,
     modelSource,
+    fallbackStages,
     loadDemoModel,
     waypoints,
     viewMode,
@@ -285,6 +287,20 @@ export const TelemetrySidebar: React.FC = () => {
                 </button>
               )}
             </div>
+
+            {/* FALLBACK WARNING CARD */}
+            {modelSource === 'LIVE RECONSTRUCTION' && fallbackStages && fallbackStages.length > 0 && (
+              <div className="p-3 rounded-lg border bg-amber-950/60 border-amber-500/60 text-amber-300 font-mono text-xs space-y-1 animate-pulse">
+                <div className="flex items-center space-x-1.5 font-bold text-amber-400">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <span>PARTIAL SYNTHETIC — {fallbackStages.join(' & ').toUpperCase()} FALLBACK USED</span>
+                </div>
+                <p className="text-[10px] text-amber-200/90 leading-normal">
+                  Real inference for stage(s) [{fallbackStages.join(', ')}] fell back to synthetic data due to missing dependencies.
+                </p>
+              </div>
+            )}
+
 
             {/* NTRO Recon Info */}
             <div className="bg-[#060908] border border-[#1A2922] rounded-lg p-3 space-y-2">

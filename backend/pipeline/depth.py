@@ -5,10 +5,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def estimate_depth_maps(frames_dir: str, depth_dir: str) -> list[str]:
+from typing import Tuple, List
+
+def estimate_depth_maps(frames_dir: str, depth_dir: str) -> Tuple[List[str], bool]:
     """
     Runs Depth Anything V2 zero-shot monocular depth estimation on each keyframe.
     Saves depth maps as 16-bit PNG or float32 NPY files in depth_dir.
+    
+    Returns:
+      (depth_paths, used_fallback)
     """
     os.makedirs(depth_dir, exist_ok=True)
     depth_paths = []
@@ -16,9 +21,10 @@ def estimate_depth_maps(frames_dir: str, depth_dir: str) -> list[str]:
     frame_files = sorted([f for f in os.listdir(frames_dir) if f.endswith(('.jpg', '.jpeg', '.png'))])
     if not frame_files:
         logger.warning(f"No frame files found in {frames_dir} for depth estimation.")
-        return []
+        return [], True
 
     depth_model = None
+    used_fallback = False
     try:
         import torch
         from transformers import pipeline
@@ -27,6 +33,7 @@ def estimate_depth_maps(frames_dir: str, depth_dir: str) -> list[str]:
         logger.info("Depth Anything V2 loaded successfully.")
     except Exception as e:
         logger.warning(f"Could not initialize Depth Anything V2 transformer pipeline: {e}. Using fast spatial gradient depth estimator.")
+        used_fallback = True
 
     for f_name in frame_files:
         frame_path = os.path.join(frames_dir, f_name)
@@ -49,16 +56,19 @@ def estimate_depth_maps(frames_dir: str, depth_dir: str) -> list[str]:
             except Exception as e:
                 logger.warning(f"Depth Anything V2 inference error on {f_name}: {e}")
                 depth_map = _generate_gradient_depth(h, w)
+                used_fallback = True
         else:
             depth_map = _generate_gradient_depth(h, w)
+            used_fallback = True
 
         depth_filename = os.path.splitext(f_name)[0] + ".npy"
         depth_path = os.path.join(depth_dir, depth_filename)
         np.save(depth_path, depth_map)
         depth_paths.append(depth_path)
 
-    logger.info(f"Generated {len(depth_paths)} dense monocular depth maps in {depth_dir}")
-    return depth_paths
+    logger.info(f"Generated {len(depth_paths)} dense monocular depth maps in {depth_dir} (used_fallback={used_fallback})")
+    return depth_paths, used_fallback
+
 
 def _generate_gradient_depth(height: int, width: int) -> np.ndarray:
     """Analytical terrain depth gradient fallback"""

@@ -13,8 +13,8 @@ from backend.pipeline.export import export_glb_and_metadata, _generate_procedura
 
 logger = logging.getLogger(__name__)
 
-# Check if MOCK_MODE environment variable is set (defaults to True for instant hackathon demo stability)
-MOCK_MODE = os.environ.get("MOCK_MODE", "true").lower() in ("true", "1", "t", "yes")
+# Check if MOCK_MODE environment variable is set (defaults to False for real production reconstruction)
+MOCK_MODE = os.environ.get("MOCK_MODE", "false").lower() in ("true", "1", "t", "yes")
 
 async def run_pipeline_job(job_id: str):
     """
@@ -38,56 +38,65 @@ async def run_pipeline_job(job_id: str):
         await _run_mock_pipeline(job_id, storage_dir, glb_output_path, start_time)
         return
 
+    fallback_stages = []
+
     # Real Pipeline Processing
     try:
         # Stage 1: Frame Extraction
-        update_job(job_id, status="extracting_frames", stage="Extracting Keyframes (OpenCV)", progress=10.0)
+        update_job(job_id, status="extracting_frames", stage="Extracting Keyframes (OpenCV)", progress=10.0, fallback_stages=fallback_stages)
         frames_dir = os.path.join(storage_dir, "frames")
         frame_paths = await asyncio.to_thread(extract_frames, video_path, frames_dir)
         await asyncio.sleep(0.5)
 
         # Stage 2: Dynamic Object Masking
-        update_job(job_id, status="masking_dynamic_objects", stage="Masking Dynamic Objects (YOLOv8)", progress=25.0)
+        update_job(job_id, status="masking_dynamic_objects", stage="Masking Dynamic Objects (YOLOv8)", progress=25.0, fallback_stages=fallback_stages)
         masks_dir = os.path.join(storage_dir, "masks")
         mask_paths = await asyncio.to_thread(mask_dynamic_objects, frames_dir, masks_dir)
         await asyncio.sleep(0.5)
 
         # Stage 3: Camera Pose Estimation
-        update_job(job_id, status="estimating_poses", stage="Estimating Camera Poses (COLMAP SfM)", progress=40.0)
-        camera_poses, flightpath_waypoints, sparse_points = await asyncio.to_thread(
+        update_job(job_id, status="estimating_poses", stage="Estimating Camera Poses (COLMAP SfM)", progress=40.0, fallback_stages=fallback_stages)
+        camera_poses, flightpath_waypoints, sparse_points, used_poses_fallback = await asyncio.to_thread(
             estimate_camera_poses, frames_dir, masks_dir, storage_dir
         )
+        if used_poses_fallback:
+            fallback_stages.append("poses")
         flightpath_data = {"waypoints": flightpath_waypoints}
         await asyncio.sleep(0.5)
 
         # Stage 4: Monocular Depth Estimation
-        update_job(job_id, status="estimating_depth", stage="Estimating Depth (Depth Anything V2)", progress=60.0)
+        update_job(job_id, status="estimating_depth", stage="Estimating Depth (Depth Anything V2)", progress=60.0, fallback_stages=fallback_stages)
         depth_dir = os.path.join(storage_dir, "depth")
-        depth_paths = await asyncio.to_thread(estimate_depth_maps, frames_dir, depth_dir)
+        depth_paths, used_depth_fallback = await asyncio.to_thread(estimate_depth_maps, frames_dir, depth_dir)
+        if used_depth_fallback:
+            fallback_stages.append("depth")
         await asyncio.sleep(0.5)
 
         # Stage 5: Scale Alignment & Point Cloud Fusion
-        update_job(job_id, status="fusing_depth", stage="Fusing Point Cloud & Scale Alignment", progress=75.0)
+        update_job(job_id, status="fusing_depth", stage="Fusing Point Cloud & Scale Alignment", progress=75.0, fallback_stages=fallback_stages)
         fused_pts, fused_cols = await asyncio.to_thread(
             fuse_depth_and_poses, frames_dir, depth_dir, masks_dir, camera_poses, sparse_points
         )
         await asyncio.sleep(0.5)
 
         # Stage 6: Surface Reconstruction
-        update_job(job_id, status="meshing", stage="Poisson Surface Reconstruction (Open3D)", progress=85.0)
+        update_job(job_id, status="meshing", stage="Poisson Surface Reconstruction (Open3D)", progress=85.0, fallback_stages=fallback_stages)
         mesh = await asyncio.to_thread(reconstruct_mesh, fused_pts, fused_cols)
         await asyncio.sleep(0.5)
 
         # Stage 7: Texturing
-        update_job(job_id, status="texturing", stage="Surface Texturing & Color Mapping", progress=92.0)
+        update_job(job_id, status="texturing", stage="Surface Texturing & Color Mapping", progress=92.0, fallback_stages=fallback_stages)
         await asyncio.sleep(0.5)
 
         # Stage 8: Export GLB & Metadata
-        update_job(job_id, status="exporting", stage="Exporting GLB & Telemetry Metadata", progress=97.0)
+        update_job(job_id, status="exporting", stage="Exporting GLB & Telemetry Metadata", progress=97.0, fallback_stages=fallback_stages)
         elapsed = time.time() - start_time
         metadata = await asyncio.to_thread(
             export_glb_and_metadata, mesh, fused_pts, glb_output_path, job_id, elapsed
         )
+        if metadata is not None:
+            metadata["fallback_stages"] = fallback_stages
+            metadata["used_fallback"] = bool(fallback_stages)
 
         # Stage 9: Complete
         update_job(
@@ -96,9 +105,11 @@ async def run_pipeline_job(job_id: str):
             stage="Reconstruction Complete",
             progress=100.0,
             metadata=metadata,
-            flightpath=flightpath_data
+            flightpath=flightpath_data,
+            fallback_stages=fallback_stages
         )
-        logger.info(f"Pipeline job {job_id} successfully completed in {elapsed:.2f}s!")
+        logger.info(f"Pipeline job {job_id} successfully completed in {elapsed:.2f}s! (fallback_stages={fallback_stages})")
+
 
     except Exception as e:
         logger.error(f"Pipeline execution failed for job {job_id}: {e}", exc_info=True)

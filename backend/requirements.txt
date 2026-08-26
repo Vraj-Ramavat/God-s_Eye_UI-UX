@@ -11,3 +11,15 @@ torch>=2.0.0
 torchvision>=0.15.0
 pillow>=10.0.0
 requests>=2.31.0
+
+# Real COLMAP SfM & Depth Anything V2 Monocular Depth Dependencies
+# Note: Recent pycolmap PyPI wheels bundle prebuilt COLMAP binaries for Windows/Linux/macOS x86_64.
+# If pycolmap requires external system binaries on your platform, install system COLMAP:
+# System COLMAP Installation Docs: https://colmap.github.io/install.html
+# - Windows: Download prebuilt binaries from https://github.com/colmap/colmap/releases
+# - Linux: sudo apt-get install colmap
+# - macOS: brew install colmap
+pycolmap>=0.4.0
+transformers>=4.35.0
+accelerate>=0.24.0
+

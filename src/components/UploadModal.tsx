@@ -21,7 +21,8 @@ export const UploadModal: React.FC = () => {
     uploadError,
     uploadVideoFile,
     loadDemoModel,
-    setUploadState
+    setUploadState,
+    reconstructionStats
   } = useAppStore();
 
   const [dragActive, setDragActive] = useState(false);
@@ -232,7 +233,7 @@ export const UploadModal: React.FC = () => {
               <div>
                 <h3 className="font-display font-bold text-lg text-[#EDEAE2]">3D MODEL RECONSTRUCTION READY</h3>
                 <p className="text-xs font-mono text-[#8B948C] mt-1">
-                  Model ready. 1,948,200 points synthesized with 99.4% terrain coverage.
+                  Model ready. {reconstructionStats.pointCount} synthesized with {reconstructionStats.coverage} terrain coverage.
                 </p>
               </div>
 

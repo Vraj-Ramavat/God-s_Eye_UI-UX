@@ -11,6 +11,7 @@ import {
   Menu, 
   X, 
   ShieldAlert,
+  AlertTriangle,
   Camera,
   Layers
 } from 'lucide-react';
@@ -30,7 +31,8 @@ export const TopBar: React.FC = () => {
     toggleHud,
     isComparisonOpen,
     toggleComparison,
-    modelSource
+    modelSource,
+    fallbackStages
   } = useAppStore();
 
   const getStatusBadge = () => {
@@ -114,6 +116,17 @@ export const TopBar: React.FC = () => {
           <span className={`w-2 h-2 rounded-full ${modelSource === 'LIVE RECONSTRUCTION' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
           <span className="font-bold">{modelSource}</span>
         </div>
+
+        {/* Partial Synthetic Fallback Warning Badge */}
+        {modelSource === 'LIVE RECONSTRUCTION' && fallbackStages && fallbackStages.length > 0 && (
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded font-mono text-[11px] bg-amber-950/90 text-amber-300 border border-amber-500/80 shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            <span className="font-bold uppercase tracking-tight">
+              PARTIAL SYNTHETIC — {fallbackStages.join(' & ').toUpperCase()} FALLBACK USED
+            </span>
+          </div>
+        )}
+
 
         {/* Mission Status Pill */}
         <div className={`flex items-center space-x-2 px-3 py-1 rounded-full border text-[11px] font-mono tracking-wider transition-all duration-300 ${status.bg} ${status.text} ${status.border}`}>

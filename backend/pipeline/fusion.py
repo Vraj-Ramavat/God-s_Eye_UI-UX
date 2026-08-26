@@ -51,6 +51,8 @@ def fuse_depth_and_poses(
         # Load depth map
         if os.path.exists(depth_path):
             depth_map = np.load(depth_path)
+            if depth_map.ndim == 3:
+                depth_map = depth_map[:, :, 0]
         else:
             depth_map = np.full((h, w), 0.5, dtype=np.float32)
 
@@ -61,14 +63,23 @@ def fuse_depth_and_poses(
         # Load mask if present
         if os.path.exists(mask_path):
             mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+            if mask is not None and mask.ndim == 3:
+                mask = mask[:, :, 0]
         else:
+            mask = np.full((h, w), 255, dtype=np.uint8)
+
+        if mask is None or mask.shape[:2] != (h, w):
             mask = np.full((h, w), 255, dtype=np.uint8)
 
         # Downsample for dense point cloud generation speed (step size)
         step = max(4, int(w / 160))
         y_indices, x_indices = np.mgrid[0:h:step, 0:w:step]
         
-        valid_mask = (mask[y_indices, x_indices] > 128)
+        sampled_mask = mask[y_indices, x_indices]
+        if sampled_mask.ndim == 3:
+            sampled_mask = sampled_mask[:, :, 0]
+        valid_mask = (sampled_mask > 128)
+        
         y_valid = y_indices[valid_mask]
         x_valid = x_indices[valid_mask]
         d_valid = depth_map[y_valid, x_valid] * scale_factor
