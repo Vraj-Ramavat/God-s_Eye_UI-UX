@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-sky-high: #C7D6DE;
+  --color-void: #0A0A0C;
+  --color-scan-cold: #3B82C4;
+  --color-scan-mid: #4FBF8B;
+  --color-scan-hot: #E8A33D;
+  --color-danger: #C4543B;
+  --color-line: rgba(232, 230, 225, 0.12);
+  --color-hud-line: rgba(232, 230, 225, 0.35);
+  --color-ink-100: #E8E6E1;
+  --color-text-muted: #8B948C;
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #0A0A0C;
+  color: #E8E6E1;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0C;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(232, 230, 225, 0.15);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #E8A33D;
+}
+
+/* Thin hairline border styling helper */
+.hairline-border {
+  border: 1px solid rgba(232, 230, 225, 0.12);
+}
+
+/* Monospace telemetry logs panel styling */
+.console-panel {
+  background-color: rgba(10, 10, 12, 0.95);
+  border: 1px solid rgba(232, 230, 225, 0.08);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom colormap background grids */
+.gis-grid {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(232, 230, 225, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(232, 230, 225, 0.04) 1px, transparent 1px);
+}
+
+/* Translucent panel blur overlays */
+.hud-panel {
+  background: rgba(10, 10, 12, 0.82);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(232, 230, 225, 0.15);
+}
+
+.hud-panel-active {
+  border-color: #E8A33D;
+  box-shadow: 0 0 10px rgba(232, 163, 61, 0.1);
+}
+
+/* HUD Background Tactical Grid Overlay */
+.hud-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(79, 169, 160, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(79, 169, 160, 0.1) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.hud-grid-dense {
+  background-image: 
+    linear-gradient(to right, rgba(79, 169, 160, 0.2) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(79, 169, 160, 0.2) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
