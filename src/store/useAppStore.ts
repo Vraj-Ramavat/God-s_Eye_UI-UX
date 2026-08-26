@@ -171,23 +171,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   measurementMode: null,
   activeMeasurementPoints: [],
-  savedMeasurements: [
-    // Pre-loaded sample measurements for immediate demonstration
-    {
-      id: 'm-sample-1',
-      type: 'distance',
-      points: [[-6.5, 4.2, 8.1], [8.2, 5.8, -4.3]],
-      value: 19.85,
-      formattedValue: '19.85m'
-    },
-    {
-      id: 'm-sample-2',
-      type: 'height',
-      points: [[2.0, 3.5, 1.0], [2.0, 11.0, 1.0]],
-      value: 7.50,
-      formattedValue: 'ΔY: 7.50m (Building Height)'
-    }
-  ],
+  savedMeasurements: [],
 
   cameraCoords: {
     x: 28,
