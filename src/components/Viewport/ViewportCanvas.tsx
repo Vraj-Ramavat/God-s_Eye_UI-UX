@@ -2,6 +2,7 @@ import React, { Suspense, useRef, useState, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import { TerrainModel } from './TerrainModel';
+import { SplatViewport } from './SplatViewport';
 import { FlythroughController } from './FlythroughController';
 import { MeasurementTool3D } from './MeasurementTool3D';
 import { HudOverlay } from './HudOverlay';
@@ -30,7 +31,6 @@ const CanvasScreenshotExporter: React.FC = () => {
   return null;
 };
 
-
 // Minimal Loading Fallback Indicator with Amber Accent
 const CanvasLoader: React.FC = () => (
   <Html center>
@@ -45,10 +45,22 @@ const CanvasLoader: React.FC = () => (
 
 export const ViewportCanvas: React.FC = () => {
   const controlsRef = useRef<any>(null);
-  const { measurementMode, setActiveModelPath } = useAppStore();
+  const { 
+    pipelineType, 
+    setPipelineType, 
+    measurementMode, 
+    setActiveModelPath, 
+    setSplatModelUrl 
+  } = useAppStore();
+  
   const [dragOverCanvas, setDragOverCanvas] = useState(false);
 
-  // Drag and Drop GLB Model Handler
+  // If splat mode is active, render SplatViewport
+  if (pipelineType === 'splat') {
+    return <SplatViewport />;
+  }
+
+  // Drag and Drop Model Handler (GLB / GLTF or SPLAT / PLY)
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -68,9 +80,15 @@ export const ViewportCanvas: React.FC = () => {
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
-      if (file.name.endsWith('.glb') || file.name.endsWith('.gltf')) {
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith('.splat') || lower.endsWith('.ply') || lower.endsWith('.ksplat')) {
+        const objectUrl = URL.createObjectURL(file);
+        setSplatModelUrl(objectUrl, file.name);
+        setPipelineType('splat');
+      } else if (lower.endsWith('.glb') || lower.endsWith('.gltf')) {
         const objectUrl = URL.createObjectURL(file);
         setActiveModelPath(objectUrl, file.name);
+        setPipelineType('mesh');
       }
     }
   };
@@ -89,8 +107,8 @@ export const ViewportCanvas: React.FC = () => {
       {dragOverCanvas && (
         <div className="absolute inset-0 z-30 bg-[#0A0E0C]/90 border-4 border-dashed border-[#E8A33D] flex flex-col items-center justify-center p-6 backdrop-blur-sm space-y-3">
           <Upload className="w-12 h-12 text-[#E8A33D] animate-bounce" />
-          <h3 className="font-display font-bold text-lg text-[#EDEAE2]">DROP .GLB MODEL FILE TO SWAP VIEWPORT</h3>
-          <p className="font-mono text-xs text-[#8B948C]">Supports standard & Draco-compressed 3D Photogrammetry meshes</p>
+          <h3 className="font-display font-bold text-lg text-[#EDEAE2]">DROP 3D MODEL FILE TO SWAP VIEWPORT</h3>
+          <p className="font-mono text-xs text-[#8B948C]">Supports .GLB, .SPLAT, .PLY, & .KSPLAT Photogrammetry outputs</p>
         </div>
       )}
 
@@ -144,3 +162,4 @@ export const ViewportCanvas: React.FC = () => {
     </div>
   );
 };
+

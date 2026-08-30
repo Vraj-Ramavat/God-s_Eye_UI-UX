@@ -19,6 +19,8 @@ import {
 export const TopBar: React.FC = () => {
   const navigate = useNavigate();
   const { 
+    pipelineType,
+    setPipelineType,
     isFlythroughActive, 
     toggleFlythrough, 
     measurementMode, 
@@ -137,6 +139,32 @@ export const TopBar: React.FC = () => {
 
       {/* 3. Right Group: Quick Action Cluster */}
       <div className="flex items-center space-x-2">
+        {/* Pipeline Viewport Mode Switcher Toggle (Mesh vs Splat) */}
+        <div className="flex items-center p-0.5 rounded bg-[#060908] border border-[#2A3B32] font-mono text-xs">
+          <button
+            onClick={() => setPipelineType('mesh')}
+            className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+              pipelineType === 'mesh'
+                ? 'bg-[#4FA9A0]/20 text-[#4FA9A0] border border-[#4FA9A0]/50 shadow-sm'
+                : 'text-[#8B948C] hover:text-[#EDEAE2]'
+            }`}
+            title="Switch to 3D Mesh Renderer (Legacy GLB Pipeline)"
+          >
+            MESH MODE
+          </button>
+          <button
+            onClick={() => setPipelineType('splat')}
+            className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+              pipelineType === 'splat'
+                ? 'bg-[#E8A33D]/20 text-[#E8A33D] border border-[#E8A33D]/50 shadow-sm'
+                : 'text-[#8B948C] hover:text-[#EDEAE2]'
+            }`}
+            title="Switch to 3D Gaussian Splat Renderer (3DGS Pipeline)"
+          >
+            SPLAT MODE
+          </button>
+        </div>
+
         {/* HUD Overlay Toggle */}
         <button
           onClick={toggleHud}

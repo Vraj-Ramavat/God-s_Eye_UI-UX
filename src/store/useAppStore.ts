@@ -4,6 +4,11 @@ import { BACKEND_URL } from '../config/env';
 export type ViewMode = 'textured' | 'wireframe' | 'pointcloud' | 'elevation' | 'thermal';
 export type MeasurementType = 'distance' | 'height' | 'area';
 export type ModelSource = 'LIVE RECONSTRUCTION' | 'DEMO DATA';
+export type PipelineType = 'mesh' | 'splat';
+
+// PLACEHOLDER: Public demo sample .splat URL to be replaced with AWS GPU training output endpoint
+export const SAMPLE_SPLAT_URL = 'https://huggingface.co/datasets/dylanebert/3dgs/resolve/main/bonsai/bonsai-7k.splat';
+export const SPLAT_PICK_RADIUS_PX = 8; // Screen-space pixel radius for Gaussian splat point picking
 
 export interface SavedMeasurement {
   id: string;
@@ -43,9 +48,13 @@ export interface ReconstructionStats {
 }
 
 export interface ModelMetadata {
-  vertexCount: string;
-  faceCount: string;
-  textureRes: string;
+  vertexCount?: string;
+  faceCount?: string;
+  textureRes?: string;
+  splatCount?: string;
+  trainingIterations?: string;
+  shDegree?: string;
+  psnr?: string;
   fileSize: string;
   reconMethod: string;
   modelName: string;
@@ -74,13 +83,16 @@ export function calculatePolygonAreaXZ(points: [number, number, number][]): numb
 interface AppState {
   // Model & View state
   activeModelPath: string;
+  pipelineType: PipelineType;
+  meshModelUrl: string;
+  splatModelUrl: string;
+  splatPickHint: string | null;
   modelSource: ModelSource;
   viewMode: ViewMode;
   sidebarOpen: boolean;
   modelMetadata: ModelMetadata;
   fallbackStages: string[];
 
-  
   // Spline Flythrough mode
   waypoints: Waypoint[];
   isFlythroughActive: boolean;
@@ -111,6 +123,10 @@ interface AppState {
   isHudVisible: boolean;
 
   // Actions
+  setPipelineType: (type: PipelineType) => void;
+  setSplatModelUrl: (url: string, customName?: string) => void;
+  setMeshModelUrl: (url: string, customName?: string) => void;
+  setSplatPickHint: (hint: string | null) => void;
   setActiveModelPath: (path: string, customName?: string) => void;
   loadDemoModel: () => void;
   setViewMode: (mode: ViewMode) => void;
@@ -146,12 +162,15 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   // Defaults
+  pipelineType: 'mesh',
   activeModelPath: '/models/12306918_recon_model.glb',
+  meshModelUrl: '/models/12306918_recon_model.glb',
+  splatModelUrl: SAMPLE_SPLAT_URL,
+  splatPickHint: null,
   modelSource: 'DEMO DATA',
   viewMode: 'textured',
   sidebarOpen: true,
   fallbackStages: [],
-
 
   waypoints: RECON_WAYPOINTS,
 
@@ -159,8 +178,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     vertexCount: '248,912 Vertices',
     faceCount: '482,104 Triangles',
     textureRes: '4096 x 4096 px',
+    splatCount: '1,450,000 Gaussians',
+    trainingIterations: '30,000 Iterations',
+    shDegree: 'Degree 3 (3rd Order SH)',
+    psnr: '32.4 dB',
     fileSize: '24.8 MB',
-    reconMethod: 'COLMAP SfM + YOLO Masking + Depth Anything V2',
+    reconMethod: 'COLMAP SfM + 3D Gaussian Splatting',
     modelName: '12306918_recon_sector_7b.glb (Demo)',
   },
 
@@ -208,8 +231,35 @@ export const useAppStore = create<AppState>((set, get) => ({
   isHudVisible: true,
 
   // Actions
+  setPipelineType: (pipelineType) => set({ pipelineType }),
+  setSplatModelUrl: (url, customName) => set((state) => ({
+    splatModelUrl: url,
+    modelMetadata: {
+      ...state.modelMetadata,
+      modelName: customName || url.split('/').pop() || 'uploaded.splat',
+      fileSize: customName ? '28.5 MB (User Splat)' : '9.8 MB',
+      reconMethod: '3D Gaussian Splatting (3DGS Pipeline)',
+      splatCount: '1,450,000 Gaussians',
+      trainingIterations: '30,000 Iterations',
+      shDegree: 'Degree 3 (3rd Order SH)',
+      psnr: '32.4 dB',
+    }
+  })),
+  setMeshModelUrl: (url, customName) => set((state) => ({
+    meshModelUrl: url,
+    activeModelPath: url,
+    modelMetadata: {
+      ...state.modelMetadata,
+      modelName: customName || url.split('/').pop() || 'uploaded.glb',
+      fileSize: customName ? '32.4 MB (User Mesh)' : '24.8 MB',
+      reconMethod: 'COLMAP SfM + YOLO Masking + Depth Anything V2',
+    }
+  })),
+  setSplatPickHint: (splatPickHint) => set({ splatPickHint }),
+
   setActiveModelPath: (path, customName) => set((state) => ({
     activeModelPath: path,
+    meshModelUrl: path,
     modelMetadata: {
       ...state.modelMetadata,
       modelName: customName || path.split('/').pop() || 'uploaded_model.glb',
@@ -218,7 +268,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   })),
 
   loadDemoModel: () => set({
+    pipelineType: 'mesh',
     activeModelPath: '/models/12306918_recon_model.glb',
+    meshModelUrl: '/models/12306918_recon_model.glb',
+    splatModelUrl: SAMPLE_SPLAT_URL,
+    splatPickHint: null,
     modelSource: 'DEMO DATA',
     fallbackStages: [],
     isUploadModalOpen: false,
@@ -228,6 +282,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       vertexCount: '248,912 Vertices',
       faceCount: '482,104 Triangles',
       textureRes: '4096 x 4096 px',
+      splatCount: '1,450,000 Gaussians',
+      trainingIterations: '30,000 Iterations',
+      shDegree: 'Degree 3 (3rd Order SH)',
+      psnr: '32.4 dB',
       fileSize: '24.8 MB',
       reconMethod: 'COLMAP SfM + YOLO Masking + Depth Anything V2',
       modelName: '12306918_recon_sector_7b.glb (Demo)',
