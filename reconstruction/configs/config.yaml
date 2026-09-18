@@ -1,0 +1,49 @@
+# Gods Eye pipeline configuration
+paths:
+  raw_video: "data/raw_videos/Candidate-A.mp4"
+  frames_dir: "data/frames"
+  masks_dir: "data/masks"
+  sfm_dir: "data/sfm"
+  depth_dir: "data/depth"
+  fused_cloud: "data/fused/fused_cloud.ply"
+  clean_cloud: "data/fused/clean_cloud.ply"
+  mesh_raw: "data/meshes/mesh_raw.ply"
+  mesh_textured: "data/meshes/mesh_textured.ply"
+  final_glb: "data/output/gods_eye_model.glb"
+  yolo_weights: "models/yolo26n.pt"
+
+stage1_frame_extraction:
+  target_fps: 3
+  blur_threshold: 60.0
+  resize_width: 1920
+
+stage2_masking:
+  confidence: 0.25
+  dynamic_classes: ["person", "car", "truck", "bus", "motorcycle", "bicycle"]
+  dilate_px: 10
+
+stage3_sfm:
+  matcher: "exhaustive"
+  use_glomap: true
+  camera_model: "OPENCV"
+
+stage4_depth:
+  model_name: "depth-anything/Depth-Anything-V2-Small-hf"
+  device: "cuda"
+
+stage5_fusion:
+  pixel_stride: 4
+  ransac_residual_threshold: 0.5
+
+stage6_cleanup:
+  nb_neighbors: 20
+  std_ratio: 2.0
+  voxel_size: 0.05
+
+stage7_meshing:
+  method: "poisson"
+  poisson_depth: 9
+  density_trim_quantile: 0.02
+
+stage9_export:
+  target_triangle_count: 150000
