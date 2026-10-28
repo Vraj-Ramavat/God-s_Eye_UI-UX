@@ -35,7 +35,7 @@ class GltfErrorBoundary extends React.Component<
   }
 }
 
-const LoadedGltfModel: React.FC<{ url: string; viewMode: ViewMode; onClick?: (e: ThreeEvent<MouseEvent>) => void }> = ({ url, viewMode, onClick }) => {
+const LoadedGltfModel: React.FC<{ url: string; viewMode: ViewMode; showObserved: boolean; showInferred: boolean; onClick?: (e: ThreeEvent<MouseEvent>) => void }> = ({ url, viewMode, showObserved, showInferred, onClick }) => {
   const { scene } = useGLTF(url, 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
   
   const { clonedScene, pointPositions, pointColors } = useMemo(() => {
@@ -61,6 +61,9 @@ const LoadedGltfModel: React.FC<{ url: string; viewMode: ViewMode; onClick?: (e:
     cloned.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
+        const materialNames = (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).map((material) => material?.name ?? '').join(' ');
+        const inferred = /inferred|envelope/i.test(mesh.name + ' ' + materialNames + ' ' + (mesh.parent?.name ?? ''));
+        mesh.visible = inferred ? showInferred : showObserved;
         mesh.castShadow = true;
         mesh.receiveShadow = true;
 
@@ -77,8 +80,9 @@ const LoadedGltfModel: React.FC<{ url: string; viewMode: ViewMode; onClick?: (e:
           }
         }
 
-        // 3. Automatically compute height-based photogrammetry vertex colormap if no vertex colors exist
-        if (mesh.geometry && !mesh.geometry.attributes.color) {
+        // Do not modify shared source geometry; only elevation mode needs custom colors.
+        if (viewMode === 'elevation' && mesh.geometry && !mesh.geometry.attributes.color) {
+          mesh.geometry = mesh.geometry.clone();
           const posAttr = mesh.geometry.attributes.position;
           if (posAttr) {
             const colors: number[] = [];
@@ -133,13 +137,8 @@ const LoadedGltfModel: React.FC<{ url: string; viewMode: ViewMode; onClick?: (e:
             flatShading: true
           });
         } else {
-          // Textured mode: Rich photogrammetry terrain shading with vertex colors
-          mesh.material = new THREE.MeshStandardMaterial({
-            vertexColors: true,
-            roughness: 0.65,
-            metalness: 0.15,
-            flatShading: false
-          });
+          // Keep the glTF material, UV atlas, transparency and double-sided settings intact.
+          // Replacing the material here erased the real 8K photographic texture.
         }
       }
     });
@@ -149,7 +148,7 @@ const LoadedGltfModel: React.FC<{ url: string; viewMode: ViewMode; onClick?: (e:
       pointPositions: new THREE.Float32BufferAttribute(ptsPos, 3),
       pointColors: new THREE.Float32BufferAttribute(ptsCols, 3)
     };
-  }, [scene, viewMode]);
+  }, [scene, viewMode, showObserved, showInferred]);
 
   if (viewMode === 'pointcloud') {
     return (
@@ -167,7 +166,7 @@ const LoadedGltfModel: React.FC<{ url: string; viewMode: ViewMode; onClick?: (e:
 };
 
 export const TerrainModel: React.FC<TerrainModelProps> = ({ onPointerClick }) => {
-  const { activeModelPath, viewMode, measurementMode, addMeasurementPoint } = useAppStore();
+  const { activeModelPath, viewMode, measurementMode, addMeasurementPoint, showObservedGeometry, showInferredGeometry } = useAppStore();
   const meshRef = useRef<THREE.Group>(null);
 
   // Handle pointer down / pick on mesh surface
@@ -448,7 +447,7 @@ export const TerrainModel: React.FC<TerrainModelProps> = ({ onPointerClick }) =>
       {activeModelPath ? (
         <GltfErrorBoundary fallback={fallbackScene}>
           <React.Suspense fallback={fallbackScene}>
-            <LoadedGltfModel url={activeModelPath} viewMode={viewMode} onClick={handleClick} />
+            <LoadedGltfModel url={activeModelPath} viewMode={viewMode} showObserved={showObservedGeometry} showInferred={showInferredGeometry} onClick={handleClick} />
           </React.Suspense>
         </GltfErrorBoundary>
       ) : (
