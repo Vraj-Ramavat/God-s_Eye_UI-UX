@@ -164,10 +164,13 @@ def get_model_glb(job_id: str):
     else:
         glb_path = os.path.join(job.storage_dir, "output.glb")
 
-    if not os.path.exists(glb_path):
-        # Generate procedural sample GLB if mock mode or placeholder requested
-        os.makedirs(os.path.dirname(glb_path), exist_ok=True)
-        _generate_procedural_glb(glb_path)
+    if not os.path.isfile(glb_path):
+        # Never fabricate a reconstruction for a missing job or output.
+        # The explicit MOCK_MODE pipeline creates its demo GLB when requested.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reconstruction output is not available for this job."
+        )
 
     return FileResponse(
         path=glb_path,
@@ -188,29 +191,9 @@ def get_job_metadata(job_id: str):
         res_meta["used_fallback"] = job.used_fallback
         return res_meta
 
-    # Default fallback schema
-    return {
-        "job_id": job_id,
-        "vertex_count": 18450,
-        "face_count": 36200,
-        "point_count": 64200,
-        "texture_resolution": "2048x2048",
-        "file_size_mb": 4.82,
-        "processing_time_seconds": job.processing_time_seconds if job else 12.4,
-        "coverage_percent": 98.6,
-        "reconstruction_method": "COLMAP SfM + YOLO Masking + Depth Anything V2 Fusion",
-        "fallback_stages": job.fallback_stages if job else [],
-        "used_fallback": job.used_fallback if job else False,
-        "capture_metadata": {
-            "location": "Quarry Recon Site Alpha",
-            "capture_date": "2026-08-26T10:00:00Z",
-            "altitude_agl_m": 120.0,
-            "gps_coordinates": {
-                "lat": 23.8124,
-                "lon": 86.4402
-            }
-        }
-    }
+    if not job:
+        raise HTTPException(status_code=404, detail="Reconstruction job not found.")
+    raise HTTPException(status_code=404, detail="Measured metadata is not available for this job.")
 
 
 @app.get("/api/jobs/{job_id}/flightpath")
