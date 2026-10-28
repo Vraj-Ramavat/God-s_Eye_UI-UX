@@ -3,7 +3,7 @@ import { BACKEND_URL } from '../config/env';
 
 export type ViewMode = 'textured' | 'wireframe' | 'pointcloud' | 'elevation' | 'thermal';
 export type MeasurementType = 'distance' | 'height' | 'area';
-export type ModelSource = 'LIVE RECONSTRUCTION' | 'DEMO DATA';
+export type ModelSource = 'LIVE RECONSTRUCTION' | 'DEMO DATA' | 'LOCAL GLB';
 export type PipelineType = 'mesh' | 'splat';
 
 // PLACEHOLDER: Public demo sample .splat URL to be replaced with AWS GPU training output endpoint
@@ -90,6 +90,10 @@ interface AppState {
   modelSource: ModelSource;
   viewMode: ViewMode;
   sidebarOpen: boolean;
+  showObservedGeometry: boolean;
+  showInferredGeometry: boolean;
+  setShowObservedGeometry: (visible: boolean) => void;
+  setShowInferredGeometry: (visible: boolean) => void;
   modelMetadata: ModelMetadata;
   fallbackStages: string[];
 
@@ -127,7 +131,7 @@ interface AppState {
   setSplatModelUrl: (url: string, customName?: string) => void;
   setMeshModelUrl: (url: string, customName?: string) => void;
   setSplatPickHint: (hint: string | null) => void;
-  setActiveModelPath: (path: string, customName?: string) => void;
+  setActiveModelPath: (path: string, customName?: string, fileSizeBytes?: number) => void;
   loadDemoModel: () => void;
   setViewMode: (mode: ViewMode) => void;
   setSidebarOpen: (open: boolean) => void;
@@ -170,6 +174,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   modelSource: 'DEMO DATA',
   viewMode: 'textured',
   sidebarOpen: true,
+  showObservedGeometry: true,
+  showInferredGeometry: true,
+  setShowObservedGeometry: (showObservedGeometry) => set({ showObservedGeometry }),
+  setShowInferredGeometry: (showInferredGeometry) => set({ showInferredGeometry }),
   fallbackStages: [],
 
   waypoints: RECON_WAYPOINTS,
@@ -257,14 +265,30 @@ export const useAppStore = create<AppState>((set, get) => ({
   })),
   setSplatPickHint: (splatPickHint) => set({ splatPickHint }),
 
-  setActiveModelPath: (path, customName) => set((state) => ({
+  setActiveModelPath: (path, customName, fileSizeBytes) => set((state) => ({
     activeModelPath: path,
     meshModelUrl: path,
+    modelSource: path.startsWith('blob:') ? 'LOCAL GLB' : state.modelSource,
     modelMetadata: {
       ...state.modelMetadata,
       modelName: customName || path.split('/').pop() || 'uploaded_model.glb',
-      fileSize: customName ? '32.4 MB (User Model)' : '24.8 MB',
-    }
+      fileSize: fileSizeBytes !== undefined ? `${(fileSizeBytes / (1024 * 1024)).toFixed(2)} MiB` : 'Not reported',
+      vertexCount: 'Not reported',
+      faceCount: 'Not reported',
+      textureRes: 'Not reported',
+      reconMethod: path.startsWith('blob:') ? 'Locally imported GLB (method unverified)' : state.modelMetadata.reconMethod,
+    },
+    reconstructionStats: path.startsWith('blob:') ? {
+      ...state.reconstructionStats,
+      pointCount: 'Not reported',
+      processingTime: 'Not reported',
+      coverage: 'Not reported',
+      fileSize: fileSizeBytes !== undefined ? `${(fileSizeBytes / (1024 * 1024)).toFixed(2)} MiB` : 'Not reported',
+      meshResolution: 'Not calibrated',
+      location: 'Unknown',
+      captureDate: 'Unknown',
+      droneType: 'Unknown',
+    } : state.reconstructionStats,
   })),
 
   loadDemoModel: () => set({
@@ -275,6 +299,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     splatPickHint: null,
     modelSource: 'DEMO DATA',
     fallbackStages: [],
+    showObservedGeometry: true,
+    showInferredGeometry: true,
     isUploadModalOpen: false,
     uploadState: 'idle',
     uploadError: null,
@@ -489,24 +515,24 @@ export const useAppStore = create<AppState>((set, get) => ({
               activeModelPath: modelGlbUrl,
               fallbackStages: fallbacks,
               modelMetadata: {
-                vertexCount: `${meta?.vertex_count?.toLocaleString() || '38,400'} Vertices`,
-                faceCount: `${meta?.face_count?.toLocaleString() || '76,000'} Triangles`,
-                textureRes: meta?.texture_resolution || '4096 x 4096 px',
-                fileSize: `${meta?.file_size_mb || 24.8} MB`,
+                vertexCount: `${meta?.vertex_count?.toLocaleString() ?? 'Not reported'} Vertices`,
+                faceCount: `${meta?.face_count?.toLocaleString() ?? 'Not reported'} Triangles`,
+                textureRes: meta?.texture_resolution ?? 'Not reported',
+                fileSize: `${meta?.file_size_mb ?? 'Not reported'} MB`,
                 reconMethod: meta?.reconstruction_method || 'COLMAP SfM + YOLO Masking + Depth Anything V2 Fusion',
                 modelName: file.name.replace(/\.[^/.]+$/, "") + "_3D_recon.glb",
               },
               reconstructionStats: {
-                pointCount: `${meta?.point_count?.toLocaleString() || '1,948,200'} Points`,
-                processingTime: `${meta?.processing_time_seconds || 14.8}s`,
-                coverage: `${meta?.coverage_percent || 99.4}%`,
-                fileSize: `${meta?.file_size_mb || 24.8} MB`,
+                pointCount: `${meta?.point_count?.toLocaleString() ?? 'Not reported'} Points`,
+                processingTime: `${meta?.processing_time_seconds ?? 'Not reported'}s`,
+                coverage: `${meta?.coverage_percent ?? 'Not reported'}%`,
+                fileSize: `${meta?.file_size_mb ?? 'Not reported'} MB`,
                 problemStatement: 'SIH26158 (Team Pixel Error)',
                 location: meta?.capture_metadata?.location || 'Live Ingested Drone Grid',
                 captureDate: meta?.capture_metadata?.capture_date || new Date().toISOString(),
                 droneType: '4K 60FPS Single-Pass Drone',
                 sensorType: 'RGB Photogrammetry Stream',
-                meshResolution: '0.8 cm/pixel',
+                meshResolution: 'Not calibrated',
               }
             });
           } else if (statusData.status === 'failed') {
