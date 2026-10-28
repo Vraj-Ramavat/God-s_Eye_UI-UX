@@ -5,6 +5,7 @@ import { ViewportCanvas } from './components/Viewport/ViewportCanvas';
 import { TelemetrySidebar } from './components/TelemetrySidebar';
 import { UploadModal } from './components/UploadModal';
 import { ComparisonSlider } from './components/ComparisonSlider';
+import { ModelReviewPanel } from './components/ModelReviewPanel';
 
 function CockpitApp() {
   return (
@@ -21,6 +22,7 @@ function CockpitApp() {
 
           {/* Collapsible / Floating Accuracy Comparison Drawer */}
           <ComparisonSlider />
+          <ModelReviewPanel />
         </main>
 
         {/* Right-Hand Telemetry Panel */}
